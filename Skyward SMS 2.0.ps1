@@ -391,7 +391,7 @@ function Idm-Dispatcher {
                                      @($function_params.Keys | ForEach-Object { "`"$_`" = '$($function_params[$_])'" }) -join ' AND '
                                  }
 
-                    $command = "INSERT INTO $Class ($(@($function_params.Keys | ForEach-Object { 'CAST("'+$_+'" AS VARCHAR(500)) AS "'+$_+'"'}) -join ', ')) VALUES ($(@($function_params.Keys | ForEach-Object { "$(if ($function_params[$_] -ne $null) { "'$($function_params[$_])'" } else { 'null' })" }) -join ', ')); SELECT TOP(1) $projection FROM $Class WHERE $selection"
+                    $command = "INSERT INTO $Class ($(@($function_params.Keys | ForEach-Object { '"'+$_+'"' }) -join ', ')) VALUES ($(@($function_params.Keys | ForEach-Object { "$(if ($function_params[$_] -ne $null) { "'$($function_params[$_])'" } else { 'null' })" }) -join ', ')); SELECT TOP(1) $projection FROM $Class WHERE $selection"
                     break
                 }
 
@@ -451,16 +451,47 @@ function Invoke-ProgressDBCommand {
             [string] $Command
         )
         log debug $Command
-        $sql_command = (New-object System.Data.Odbc.OdbcCommand($Command,$Global:ProgressDBConnection))
-        $dataSet = (New-Object System.Data.DataSet)
-        $dataAdapter = (New-Object System.Data.Odbc.OdbcDataAdapter($sql_command))
-        $dataAdapter.Fill($dataSet) | Out-Null
- 
-        $result = $dataSet.Tables[0].Rows;
+        log debug "test update??"
+        
 
+        $sql_command  = New-Object System.Data.Odbc.OdbcCommand($Command, $Global:ProgressDBConnection)
+        $data_adapter = New-Object System.Data.Odbc.OdbcDataAdapter($sql_command)
+        $data_table   = New-Object System.Data.DataTable
+        $data_adapter.Fill($data_table) | Out-Null
+
+        # Output data
+        $data_table.Rows
+
+        $data_table.Dispose()
+        $data_adapter.Dispose()
         $sql_command.Dispose()
+        
+        <#
+        $sql_command = New-object System.Data.Odbc.OdbcCommand($Command,$Global:ProgressDBConnection)
+        $data_adapter = New-Object System.Data.Odbc.OdbcDataAdapter($sql_command)
+        $data_set = New-Object System.Data.DataSet
+        $data_adapter.Fill($data_set) | Out-Null
+ 
+        $data_set.Tables[0]
+        
+        $rows = [System.Collections.ArrayList]@()
+        foreach($row in $result)
+        {
+            $newRow = @{}
+            foreach($prop in $row.PSObject.properties)
+            {
+                if(@("RowError","RowState","Table","HasErrors","ItemArray") -contains $prop.Name) { continue; }
+                $newRow[$prop.Name.replace('-','_')] = "$($prop.Value)"
+            }
+            [void]$rows.Add($newRow)
+        }
 
-        @($result)
+        $rows
+        
+
+        $data_set.Dispose()
+        $data_adapter.Dispose()
+        $sql_command.Dispose()#>
     }
     $Command = ($Command -split "`n" | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne '' }) -join ' '
 
