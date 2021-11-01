@@ -450,48 +450,20 @@ function Invoke-ProgressDBCommand {
         param (
             [string] $Command
         )
-        log debug $Command
-        log debug "test update??"
-        
-
+        log debug $Command     
         $sql_command  = New-Object System.Data.Odbc.OdbcCommand($Command, $Global:ProgressDBConnection)
         $data_adapter = New-Object System.Data.Odbc.OdbcDataAdapter($sql_command)
         $data_table   = New-Object System.Data.DataTable
         $data_adapter.Fill($data_table) | Out-Null
 
         # Output data
-        $data_table.Rows
+        $data_table.Rows | Select $data_table.Columns.ColumnName
+
+        log debug $data_table.Columns
 
         $data_table.Dispose()
         $data_adapter.Dispose()
         $sql_command.Dispose()
-        
-        <#
-        $sql_command = New-object System.Data.Odbc.OdbcCommand($Command,$Global:ProgressDBConnection)
-        $data_adapter = New-Object System.Data.Odbc.OdbcDataAdapter($sql_command)
-        $data_set = New-Object System.Data.DataSet
-        $data_adapter.Fill($data_set) | Out-Null
- 
-        $data_set.Tables[0]
-        
-        $rows = [System.Collections.ArrayList]@()
-        foreach($row in $result)
-        {
-            $newRow = @{}
-            foreach($prop in $row.PSObject.properties)
-            {
-                if(@("RowError","RowState","Table","HasErrors","ItemArray") -contains $prop.Name) { continue; }
-                $newRow[$prop.Name.replace('-','_')] = "$($prop.Value)"
-            }
-            [void]$rows.Add($newRow)
-        }
-
-        $rows
-        
-
-        $data_set.Dispose()
-        $data_adapter.Dispose()
-        $sql_command.Dispose()#>
     }
     $Command = ($Command -split "`n" | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne '' }) -join ' '
 
