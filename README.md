@@ -12,7 +12,7 @@ NIM Connector for Skyward SMS 2.0
 
 ## Requirements
 - Progress OpenEdge Driver 11.7+ (ODBC)
-  -- https://support.skyward.com/DeptDocs/Corporate/IT%20Services/Public%20Website/Technical%20Information/PaCInstallDocs/Skyward%20ODBC%20Launch%20Kit.pdf
+  https://support.skyward.com/DeptDocs/Corporate/IT%20Services/Public%20Website/Technical%20Information/PaCInstallDocs/Skyward%20ODBC%20Launch%20Kit.pdf
 
 ## Sample VPN Scripts
 ### Open VPN
