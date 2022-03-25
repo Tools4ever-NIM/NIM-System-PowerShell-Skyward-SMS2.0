@@ -403,7 +403,7 @@ function Idm-Dispatcher {
                 'Read' {
                     $selection = if ($function_params['where_clause'].length -eq 0) { '' } else { " WHERE $($function_params['where_clause'])" }
 
-                    $command = "SELECT TOP 50 $projection FROM `"PUB`".`"$Class`"$selection"
+                    $command = "SELECT $projection FROM `"PUB`".`"$Class`"$selection"
                     break
                 }
 
