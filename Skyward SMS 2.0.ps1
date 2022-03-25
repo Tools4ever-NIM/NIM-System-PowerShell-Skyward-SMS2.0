@@ -75,7 +75,6 @@ function Idm-SystemInfo {
                 label = 'Username'
                 label_indent = $true
                 description = 'User account name to access server'
-                value = 'SKYDBUSER'
             }
             @{
                 name = 'password'
@@ -84,7 +83,6 @@ function Idm-SystemInfo {
                 label = 'Password'
                 label_indent = $true
                 description = 'User account password to access server'
-                value = 'SKYDBPASS'
             }
             @{
                 name = 'isolation_mode'
@@ -121,6 +119,13 @@ function Idm-SystemInfo {
 
     if ($TestConnection) {
         Open-ProgressDBConnection $ConnectionParams
+
+        $tables = Invoke-ProgressDBCommand "
+                SELECT TBL 'Name', 'Table' `"Type`"  
+                FROM sysprogress.SYSTABLES_FULL 
+                WHERE TBLTYPE = 'T'
+                ORDER BY TBL
+            "
     }
 
     if ($Configuration) {
@@ -485,11 +490,12 @@ function Open-ProgressDBConnection {
     $connection_params = ConvertFrom-Json2 $ConnectionParams
 
     $connection_string =  "DRIVER={Progress OpenEdge $($connection_params.driver_version) driver};HOST=$($connection_params.host_name);PORT=$($connection_params.port);DB=$($connection_params.database);UID=$($connection_params.user);PWD=$($connection_params.password);DIL=$($connection_params.isolation_mode);AS=$($connection_params.array_size)"
-    LOG info $connection_string
+    
     if($connection_params.enableETWT) { $connectionString += "ETWT=1;" }
     if($connection_params.enableUWCT) { $connectionString += "UWCT=1;" }
     if($connection_params.enableKA) { $connectionString += "KA=1;" }
-
+    LOG info $connection_string
+    
     if ($Global:ProgressDBConnection -and $connection_string -ne $Global:ProgressDBConnectionString) {
         Log info "ProgressDBConnection connection parameters changed"
         Close-ProgressDBConnection
@@ -500,29 +506,25 @@ function Open-ProgressDBConnection {
         Close-ProgressDBConnection
     }
 
-    if ($Global:ProgressDBConnection) {
-        #Log debug "Reusing ProgressDBConnection"
+    Log info "Opening ProgressDBConnection '$connection_string'"
+
+    try {
+        $connection = (new-object System.Data.Odbc.OdbcConnection);
+        $connection.connectionstring = $connection_string
+        $connection.open();
+
+        $Global:ProgressDBConnection       = $connection
+        $Global:ProgressDBConnectionString = $connection_string
+
+        $Global:ColumnsInfoCache = @{}
     }
-    else {
-        Log info "Opening ProgressDBConnection '$connection_string'"
-
-        try {
-            $connection = (new-object System.Data.Odbc.OdbcConnection);
-            $connection.connectionstring = $connection_string
-            $connection.open();
-
-            $Global:ProgressDBConnection       = $connection
-            $Global:ProgressDBConnectionString = $connection_string
-
-            $Global:ColumnsInfoCache = @{}
-        }
-        catch {
-            Log warn "Failed: $_"
-            #Write-Error $_
-        }
-
-        Log info "Done"
+    catch {
+        Log warn "Failed: $_"
+        #Write-Error $_
     }
+
+    Log info "Done"
+    
 }
 
 
