@@ -88,7 +88,7 @@ function Idm-SystemInfo {
                 name = 'isolation_mode'
                 type = 'textbox'
                 label = 'Isolation Mode'
-                value = 'READ UNCOMMITED'
+                value = 'READ UNCOMMITTED'
             }
             @{
                 name = 'array_size'
