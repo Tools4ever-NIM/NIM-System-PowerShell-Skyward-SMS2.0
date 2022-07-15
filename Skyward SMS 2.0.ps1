@@ -495,7 +495,11 @@ function Open-ProgressDBConnection {
     if($connection_params.enableUWCT) { $connectionString += "UWCT=1;" }
     if($connection_params.enableKA) { $connectionString += "KA=1;" }
     LOG info $connection_string
-    
+
+    $Global:enableVPN = $connection_params.enableVPN
+    $Global:vpnOpenPath = $connection_params.vpnOpenPath
+    $Global:vpnClosePath = $connection_params.vpnClosePath
+
     if ($Global:ProgressDBConnection -and $connection_string -ne $Global:ProgressDBConnectionString) {
         Log info "ProgressDBConnection connection parameters changed"
         Close-ProgressDBConnection
@@ -509,6 +513,10 @@ function Open-ProgressDBConnection {
     Log info "Opening ProgressDBConnection '$connection_string'"
 
     try {
+        #Force close any connections before connecting
+        Close-ProgressDBVPN 
+        Open-ProgressDBVPN
+        
         $connection = (new-object System.Data.Odbc.OdbcConnection);
         $connection.connectionstring = $connection_string
         $connection.open();
@@ -533,13 +541,38 @@ function Close-ProgressDBConnection {
         Log info "Closing ProgressDBConnection"
 
         try {
+            
             $Global:ProgressDBConnection.Close()
             $Global:ProgressDBConnection = $null
+            Close-ProgressDBVPN
         }
         catch {
             # Purposely ignoring errors
         }
 
+        
+
         Log info "Done"
+    }
+}
+
+function Open-ProgressDBVPN {
+    if ($Global:enableVPN -eq $true)
+    {
+        Log info "Opening vpn..."        
+        Start-Process $Global:vpnOpenPath| Wait-Process -Timeout 30
+        #Log info "$($result)"
+        Log info "Connected to vpn."
+    }
+}
+
+
+function Close-ProgressDBVPN {
+    if ($Global:enableVPN -eq $true)
+    {
+        Log info "Closing vpn..."
+        Start-Process $Global:vpnClosePath | Wait-Process -Timeout 30
+        #Log info "$($result)"
+        Log info "Closed vpn."
     }
 }
