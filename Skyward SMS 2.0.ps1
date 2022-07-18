@@ -495,7 +495,11 @@ function Open-ProgressDBConnection {
     if($connection_params.enableUWCT) { $connectionString += "UWCT=1;" }
     if($connection_params.enableKA) { $connectionString += "KA=1;" }
     LOG info $connection_string
-    
+
+    $Global:enableVPN = $connection_params.enableVPN
+    $Global:vpnOpenPath = $connection_params.vpnOpenPath
+    $Global:vpnClosePath = $connection_params.vpnClosePath
+
     if ($Global:ProgressDBConnection -and $connection_string -ne $Global:ProgressDBConnectionString) {
         Log info "ProgressDBConnection connection parameters changed"
         Close-ProgressDBConnection
@@ -509,6 +513,10 @@ function Open-ProgressDBConnection {
     Log info "Opening ProgressDBConnection '$connection_string'"
 
     try {
+        #Force close any connections before connecting
+        Close-ProgressDBVPN 
+        Open-ProgressDBVPN
+        
         $connection = (new-object System.Data.Odbc.OdbcConnection);
         $connection.connectionstring = $connection_string
         $connection.open();
@@ -533,13 +541,75 @@ function Close-ProgressDBConnection {
         Log info "Closing ProgressDBConnection"
 
         try {
+            
             $Global:ProgressDBConnection.Close()
             $Global:ProgressDBConnection = $null
+            Close-ProgressDBVPN
         }
         catch {
             # Purposely ignoring errors
         }
 
+        
+
         Log info "Done"
     }
+}
+
+function Open-ProgressDBVPN {
+    if ($Global:enableVPN -eq $true)
+    {
+        Log info "Opening vpn..."        
+
+        $vpnOutput = Get-ProcessOutput -FileName $Global:vpnOpenPath
+        Log info $vpnOutput.StandardOutput
+
+        if($vpnOutput.StandardError -ne $null)
+        {
+            Log error $vpnOutput.StandardError
+        }
+        Log info "Connected to vpn."
+    }
+}
+
+
+function Close-ProgressDBVPN {
+    if ($Global:enableVPN -eq $true)
+    {
+        Log info "Closing vpn..."
+
+        $vpnOutput = Get-ProcessOutput -FileName $Global:vpnClosePath
+        Log info $vpnOutput.StandardOutput
+
+        if($vpnOutput.StandardError -ne $null)
+        {
+            Log error $vpnOutput.StandardError
+        }
+
+        Log info "Closed vpn."
+    }
+}
+
+function Get-ProcessOutput
+{
+    Param (
+                [Parameter(Mandatory=$true)]$FileName,
+                $Args
+    )
+    
+    $process = New-Object System.Diagnostics.Process
+    $process.StartInfo.UseShellExecute = $false
+    $process.StartInfo.RedirectStandardOutput = $true
+    $process.StartInfo.RedirectStandardError = $true
+    $process.StartInfo.FileName = $FileName
+    if($Args) { $process.StartInfo.Arguments = $Args }
+    $out = $process.Start()
+    $process.WaitForExit(30000)
+    $StandardError = $process.StandardError.ReadToEnd()
+    $StandardOutput = $process.StandardOutput.ReadToEnd()
+    
+    $output = New-Object PSObject
+    $output | Add-Member -type NoteProperty -name StandardOutput -Value $StandardOutput
+    $output | Add-Member -type NoteProperty -name StandardError -Value $StandardError
+    return $output
 }
