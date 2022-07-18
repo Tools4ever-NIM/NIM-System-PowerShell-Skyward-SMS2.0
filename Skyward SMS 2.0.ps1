@@ -560,8 +560,14 @@ function Open-ProgressDBVPN {
     if ($Global:enableVPN -eq $true)
     {
         Log info "Opening vpn..."        
-        Start-Process $Global:vpnOpenPath| Wait-Process -Timeout 30
-        #Log info "$($result)"
+
+        $vpnOutput = Get-ProcessOutput -FileName $Global:vpnOpenPath
+        Log info $vpnOutput.StandardOutput
+
+        if($vpnOutput.StandardError -ne $null)
+        {
+            Log error $vpnOutput.StandardError
+        }
         Log info "Connected to vpn."
     }
 }
@@ -571,8 +577,39 @@ function Close-ProgressDBVPN {
     if ($Global:enableVPN -eq $true)
     {
         Log info "Closing vpn..."
-        Start-Process $Global:vpnClosePath | Wait-Process -Timeout 30
-        #Log info "$($result)"
+
+        $vpnOutput = Get-ProcessOutput -FileName $Global:vpnClosePath
+        Log info $vpnOutput.StandardOutput
+
+        if($vpnOutput.StandardError -ne $null)
+        {
+            Log error $vpnOutput.StandardError
+        }
+
         Log info "Closed vpn."
     }
+}
+
+function Get-ProcessOutput
+{
+    Param (
+                [Parameter(Mandatory=$true)]$FileName,
+                $Args
+    )
+    
+    $process = New-Object System.Diagnostics.Process
+    $process.StartInfo.UseShellExecute = $false
+    $process.StartInfo.RedirectStandardOutput = $true
+    $process.StartInfo.RedirectStandardError = $true
+    $process.StartInfo.FileName = $FileName
+    if($Args) { $process.StartInfo.Arguments = $Args }
+    $out = $process.Start()
+    $process.WaitForExit(30000)
+    $StandardError = $process.StandardError.ReadToEnd()
+    $StandardOutput = $process.StandardOutput.ReadToEnd()
+    
+    $output = New-Object PSObject
+    $output | Add-Member -type NoteProperty -name StandardOutput -Value $StandardOutput
+    $output | Add-Member -type NoteProperty -name StandardError -Value $StandardError
+    return $output
 }
